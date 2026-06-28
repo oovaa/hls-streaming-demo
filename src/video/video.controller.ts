@@ -20,8 +20,6 @@ export class VideoController {
         },
       );
 
-    console.log('queued');
-
     return {
       message: 'processing video',
       data,
