@@ -2,10 +2,20 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UploadModule } from './upload/upload.module';
+import { BullModule } from '@nestjs/bullmq';
+import { VideoController } from './video/video.controller';
+import { WorkerService } from './worker/worker.service';
 
 @Module({
-  imports: [UploadModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    UploadModule,
+    BullModule.forRoot({
+      connection: { host: 'localhost', port: 6379 },
+      defaultJobOptions: { attempts: 3, removeOnComplete: 1000 },
+    }),
+    BullModule.registerQueue({ name: 'hls' }, { name: 'outputs' }),
+  ],
+  controllers: [AppController, VideoController],
+  providers: [WorkerService, AppService, WorkerService],
 })
 export class AppModule {}
