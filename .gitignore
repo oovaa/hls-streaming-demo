@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+storage/uploads/*
+storage/hls/*
+!storage/uploads/.gitkeep
+!storage/hls/.gitkeep
+bun.lock
