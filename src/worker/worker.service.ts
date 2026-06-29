@@ -3,7 +3,7 @@ import { Job } from 'bullmq';
 
 @Processor('hls', { concurrency: 2 })
 export class WorkerService extends WorkerHost {
-  async process(job: Job, token?: string): Promise<any> {
+  async process(job: Job, _?: string): Promise<any> {
     await job.updateProgress(10);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await job.updateProgress(40);

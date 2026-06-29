@@ -1,42 +1,33 @@
 import {
   Controller,
-  Get,
   Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { UploadService } from './upload.service';
-import { CreateUploadDto } from './dto/create-upload.dto';
-import { UpdateUploadDto } from './dto/update-upload.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
-  create(@Body() createUploadDto: CreateUploadDto) {
-    return this.uploadService.create(createUploadDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.uploadService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.uploadService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUploadDto: UpdateUploadDto) {
-    return this.uploadService.update(+id, updateUploadDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.uploadService.remove(+id);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 500 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['video/mp4'];
+        // cb(null, allowed.includes(file.mimetype));
+        if (allowed.includes(file.mimetype)) cb(null, true);
+        else {
+          console.log('file isnt supported', file.mimetype);
+          // throw new Error('Not supported file ' + file.mimetype);
+          cb(null, false);
+        }
+      },
+    }),
+  )
+  create(@UploadedFile() file: Express.Multer.File) {
+    return this.uploadService.create(file);
   }
 }

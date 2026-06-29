@@ -1,26 +1,37 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUploadDto } from './dto/create-upload.dto';
-import { UpdateUploadDto } from './dto/update-upload.dto';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
+import { TRANSCODE_QUEUE_NAME } from 'src/app.module';
+import { randomUUID } from 'crypto';
+import { writeFile } from 'fs/promises';
 
 @Injectable()
 export class UploadService {
-  create(createUploadDto: CreateUploadDto) {
-    return 'This action adds a new upload';
-  }
+  constructor(
+    @InjectQueue(TRANSCODE_QUEUE_NAME) private readonly videoQueue: Queue,
+  ) {}
+  async create(file: Express.Multer.File) {
+    const jobId = randomUUID();
 
-  findAll() {
-    return `This action returns all upload`;
-  }
+    const file_name = `${jobId}-${file.originalname}`;
+    console.log('The File', file_name);
 
-  findOne(id: number) {
-    return `This action returns a #${id} upload`;
-  }
+    try {
+      await writeFile(`storage/uploads/${file_name}`, file.buffer);
+    } catch (err) {
+      console.log('found an error during saving the file ', err);
+      throw new Error(err);
+    }
 
-  update(id: number, updateUploadDto: UpdateUploadDto) {
-    return `This action updates a #${id} upload`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} upload`;
+    try {
+      await this.videoQueue.add('video_' + randomUUID(), {
+        file_path: 'storage/uploads/' + file_name,
+        jobId,
+      });
+    } catch (err) {
+      console.log('error during adding to the queue', err);
+      throw new Error(err);
+    }
+    return { jobId };
   }
 }
