@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
-import { TRANSCODE_QUEUE_NAME } from 'src/app.module';
 import { randomUUID } from 'crypto';
 import { writeFile } from 'fs/promises';
+import { TRANSCODE_QUEUE_NAME } from 'src/transcode/transcode.constants';
 
 @Injectable()
 export class UploadService {
@@ -12,20 +12,22 @@ export class UploadService {
   ) {}
   async create(file: Express.Multer.File) {
     const jobId = randomUUID();
-
     const file_name = `${jobId}-${file.originalname}`;
+    const file_path = `storage/uploads/${file_name}`;
+
     console.log('The File', file_name);
 
     try {
-      await writeFile(`storage/uploads/${file_name}`, file.buffer);
+      await writeFile(file_path, file.buffer);
+      console.log('file saved at', file_path);
     } catch (err) {
       console.log('found an error during saving the file ', err);
       throw new Error(err);
     }
 
     try {
-      await this.videoQueue.add('video_' + randomUUID(), {
-        file_path: 'storage/uploads/' + file_name,
+      await this.videoQueue.add(jobId, {
+        file_path: file_path,
         jobId,
       });
     } catch (err) {

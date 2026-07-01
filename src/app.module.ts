@@ -6,8 +6,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { VideoController } from './video/video.controller';
 import { WorkerService } from './worker/worker.service';
 import { VideoQueueEventListiener } from 'vidoe_queue_event';
-
-export const TRANSCODE_QUEUE_NAME = 'transcode';
+import { TranscodeModule } from './transcode/transcode.module';
 
 @Module({
   imports: [
@@ -17,6 +16,7 @@ export const TRANSCODE_QUEUE_NAME = 'transcode';
       defaultJobOptions: { attempts: 3, backoff: 2000, removeOnComplete: 1000 },
     }),
     BullModule.registerQueue({ name: 'hls' }),
+    TranscodeModule,
   ],
   controllers: [AppController, VideoController],
   providers: [
