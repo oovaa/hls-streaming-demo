@@ -11,10 +11,10 @@ export class UploadService {
     @InjectQueue(TRANSCODE_QUEUE_NAME) private readonly videoQueue: Queue,
   ) {}
   async create(file: Express.Multer.File) {
-    const jobId = randomUUID();
-    const file_name = `${jobId}-${file.originalname}`;
+    const id = randomUUID();
+    const file_name = `${id}#${file.originalname}`;
     const file_path = `storage/uploads/${file_name}`;
-
+    let jobId: string | undefined;
     console.log('The File', file_name);
 
     try {
@@ -26,14 +26,18 @@ export class UploadService {
     }
 
     try {
-      await this.videoQueue.add(jobId, {
-        file_path: file_path,
-        jobId,
-      });
+      jobId = (
+        await this.videoQueue.add(id, {
+          file_path: file_path,
+          id,
+        })
+      ).id;
     } catch (err) {
       console.log('error during adding to the queue', err);
       throw new Error(err);
     }
-    return { jobId };
+
+    console.log('the jobId is', jobId);
+    return { jobId, id };
   }
 }

@@ -16,10 +16,9 @@ export class WorkerService extends WorkerHost {
     return Promise.resolve();
   }
 
-
-  @OnWorkerEvent("progress")
+  @OnWorkerEvent('progress')
   onProgress(job: Job) {
-    console.log("job", job.id, "completed", job.progress, "%");
+    console.log('job', job.id, 'completed', job.progress, '%');
   }
 
   @OnWorkerEvent('active')
@@ -33,7 +32,11 @@ export class WorkerService extends WorkerHost {
 
   @OnWorkerEvent('failed')
   ondfail(job: Job) {
-
-    console.log('failed', job.id, "JOB FAILED attemtp number", job.attemptsMade)
+    console.log(
+      'failed',
+      job.id,
+      'JOB FAILED attemtp number',
+      job.attemptsMade,
+    );
   }
 }
