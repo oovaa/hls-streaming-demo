@@ -7,6 +7,7 @@ import { BullModule } from '@nestjs/bullmq';
 // import { WorkerService } from './worker/worker.service';
 // import { VideoQueueEventListiener } from 'vidoe_queue_event';
 import { TranscodeModule } from './transcode/transcode.module';
+import { StreamModule } from './stream/stream.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TranscodeModule } from './transcode/transcode.module';
     }),
     // BullModule.registerQueue({ name: 'hls' }),
     TranscodeModule,
+    StreamModule,
   ],
   controllers: [AppController, /*VideoController*/],
   providers: [
