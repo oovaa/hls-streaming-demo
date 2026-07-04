@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { StreamService } from './stream.service';
 import { CreateStreamDto } from './dto/create-stream.dto';
 import { UpdateStreamDto } from './dto/update-stream.dto';
@@ -17,9 +25,9 @@ export class StreamController {
     return this.streamService.findAll();
   }
 
-  @Get(':id')
+  @Get('job/:id')
   findOne(@Param('id') id: string) {
-    return this.streamService.findOne(+id);
+    return this.streamService.getJobStatus(+id);
   }
 
   @Patch(':id')

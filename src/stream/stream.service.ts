@@ -7,7 +7,9 @@ export class StreamService {
   create(createStreamDto: CreateStreamDto) {
     return 'This action adds a new stream';
   }
-
+  getJobStatus(id) {
+    return null;
+  }
   findAll() {
     return `This action returns all stream`;
   }

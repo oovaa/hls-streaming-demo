@@ -33,12 +33,12 @@ User ← [Stream API]  ← HLS files  ← [Transcode Worker / FFmpeg]
 
 ## ABR Renditions
 
-| Quality | Resolution | Bitrate | Audio Bitrate |
-|---------|-----------|---------|---------------|
-| 1080p   | 1920×1080 | 5 Mbps  | 128 Kbps      |
-| 720p    | 1280×720  | 3 Mbps  | 96 Kbps       |
-| 480p    | 854×480   | 1.5 Mbps| 64 Kbps       |
-| 360p    | 640×360   | 800 Kbps| 64 Kbps       |
+| Quality | Resolution | Bitrate  | Audio Bitrate |
+| ------- | ---------- | -------- | ------------- |
+| 1080p   | 1920×1080  | 5 Mbps   | 128 Kbps      |
+| 720p    | 1280×720   | 3 Mbps   | 96 Kbps       |
+| 480p    | 854×480    | 1.5 Mbps | 64 Kbps       |
+| 360p    | 640×360    | 800 Kbps | 64 Kbps       |
 
 FFmpeg produces a master `master.m3u8` pointing to each rendition's sub-playlist and TS segments.
 
@@ -46,27 +46,27 @@ FFmpeg produces a master `master.m3u8` pointing to each rendition's sub-playlist
 
 ### UploadModule
 
-| File | Responsibility |
-|------|---------------|
-| `upload.controller.ts` | `POST /upload` — accepts multipart video file, delegates to service |
-| `upload.service.ts` | Saves file to `storage/uploads/`, enqueues BullMQ job, returns job ID |
-| `upload.module.ts` | Registers controller + service, imports BullMQ |
+| File                   | Responsibility                                                        |
+| ---------------------- | --------------------------------------------------------------------- |
+| `upload.controller.ts` | `POST /upload` — accepts multipart video file, delegates to service   |
+| `upload.service.ts`    | Saves file to `storage/uploads/`, enqueues BullMQ job, returns job ID |
+| `upload.module.ts`     | Registers controller + service, imports BullMQ                        |
 
 ### TranscodeModule
 
-| File | Responsibility |
-|------|---------------|
+| File                     | Responsibility                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `transcode.processor.ts` | BullMQ `@Processor`, runs FFmpeg with ABR presets, writes HLS to `storage/hls/{jobId}/`, updates job status |
-| `transcode.constants.ts` | ABR preset definitions (resolution, bitrate, codec config) |
-| `transcode.module.ts` | Registers queue + worker, connects to Redis |
+| `transcode.constants.ts` | ABR preset definitions (resolution, bitrate, codec config)                                                  |
+| `transcode.module.ts`    | Registers queue + worker, connects to Redis                                                                 |
 
 ### StreamModule
 
-| File | Responsibility |
-|------|---------------|
+| File                   | Responsibility                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------- |
 | `stream.controller.ts` | `GET /job/:id` — returns job status; `GET /stream/:id` — serves HLS files + player page |
-| `stream.service.ts` | Reads job status from BullMQ; builds and serves the hls.js player HTML page |
-| `stream.module.ts` | Registers controller + service |
+| `stream.service.ts`    | Reads job status from BullMQ; builds and serves the hls.js player HTML page             |
+| `stream.module.ts`     | Registers controller + service                                                          |
 
 ## Directory Structure (Project Root)
 
@@ -124,17 +124,20 @@ test/
 ### Task 1 — Project Setup & Dependencies
 
 **Subtask 1.1 – Install Redis**
+
 - Check if Redis is installed locally (`redis-cli ping`)
 - If not, install via `sudo apt install redis-server` (Linux) or `brew install redis` (macOS)
 - Start Redis: `redis-server --daemonize yes`
 
 **Subtask 1.2 – Install npm packages**
+
 - `bun add @nestjs/bullmq bullmq ioredis`
 - `bun add -D @types/multer`
 - `bun add hls.js` (placed in `public/hls.js/` for static serving)
 - Verify `package.json` updated and `bun.lock` generated
 
 **Subtask 1.3 – Create storage directories**
+
 - `mkdir -p storage/uploads storage/hls`
 
 ---
@@ -142,17 +145,20 @@ test/
 ### Task 2 — UploadModule
 
 **Subtask 2.1 – `upload/upload.module.ts`**
+
 - Import `BullModule.registerQueue({ name: 'transcode' })`
 - Register `UploadController` and `UploadService` in `providers` and `controllers`
 - Export the module
 
 **Subtask 2.2 – `upload/upload.controller.ts`**
+
 - `@Post('upload')` with `@UseInterceptors(FileInterceptor('file'))`
 - Accept `@UploadedFile()` (multer `Express.Multer.File`)
 - Call `uploadService.upload()` with the file buffer and original name
 - Return `{ jobId }`
 
 **Subtask 2.3 – `upload/upload.service.ts`**
+
 - Save file buffer to `storage/uploads/{uuid}-{originalName}`
 - Inject `@InjectQueue('transcode')` and call `queue.add('transcode', { filePath, jobId })`
 - Return the BullMQ `job.id` as the `jobId`
@@ -162,15 +168,18 @@ test/
 ### Task 3 — TranscodeModule
 
 **Subtask 3.1 – `transcode/transcode.constants.ts`**
+
 - Define array of ABR preset objects: `{ name, width, height, videoBitrate, audioBitrate }`
 - Include all 4 tiers (1080p, 720p, 480p, 360p)
 
 **Subtask 3.2 – `transcode/transcode.module.ts`**
+
 - Import `BullModule.registerQueue({ name: 'transcode' })`
 - Register `TranscodeProcessor` in `providers`
 - Configure BullMQ root connection in `AppModule` (or here)
 
 **Subtask 3.3 – `transcode/transcode.processor.ts`**
+
 - Annotate with `@Processor('transcode')`
 - `@Process('transcode')` handler receives `{ filePath, jobId }`
 - Steps inside the handler:
@@ -227,15 +236,17 @@ Single FFmpeg call — one input, 4 video+audio outputs, filter_complex for scal
 ### Task 4 — StreamModule
 
 **Subtask 4.1 – `stream/stream.module.ts`**
+
 - Register `StreamController` and `StreamService`
 - Import `BullModule.registerQueue({ name: 'transcode' })` to access job state
 
 **Subtask 4.2 – `stream/stream.controller.ts`**
+
 - `GET /job/:id` — returns job status from BullMQ via `streamService.getJobStatus(id)`
 - `GET /stream/:id` — returns an HTML page with hls.js player via `streamService.getPlayerPage(id)`
 - NestJS static file serving for `storage/hls/:id/*` files (configure Express static)
-
-**Subtask 4.3 – `stream/stream.service.ts`**
+  streamcon
+  **Subtask 4.3 – `stream/stream.service.ts`**
 - `getJobStatus(jobId)` — fetch BullMQ job, return `{ id, status, progress }`
 - `getPlayerPage(jobId)` — return an HTML string with the hls.js player
 
@@ -244,23 +255,23 @@ Single FFmpeg call — one input, 4 video+audio outputs, filter_complex for scal
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <script src="/hls.js/hls.min.js"></script>
-</head>
-<body>
-  <video id="video" controls width="960"></video>
-  <script>
-    const video = document.getElementById('video');
-    const src = '/hls/{jobId}/master.m3u8';
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(src);
-      hls.attachMedia(video);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-    }
-  </script>
-</body>
+  <head>
+    <script src="/hls.js/hls.min.js"></script>
+  </head>
+  <body>
+    <video id="video" controls width="960"></video>
+    <script>
+      const video = document.getElementById('video');
+      const src = '/hls/{jobId}/master.m3u8';
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(src);
+        hls.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = src;
+      }
+    </script>
+  </body>
 </html>
 ```
 
@@ -269,16 +280,19 @@ Single FFmpeg call — one input, 4 video+audio outputs, filter_complex for scal
 ### Task 5 — Wire It Up
 
 **Subtask 5.1 – Configure BullMQ root in `app.module.ts`**
+
 - Add `BullModule.forRoot({ connection: { host: 'localhost', port: 6379 } })`
 - Import `UploadModule`, `TranscodeModule`, `StreamModule`
 - Remove any remaining boilerplate imports
 
 **Subtask 5.2 – Configure Express static serving in `main.ts`**
+
 - `app.useStaticAssets(join(__dirname, '..', 'storage', 'hls'), { prefix: '/hls' })` — serve HLS files
 - `app.useStaticAssets(join(__dirname, '..', 'node_modules', 'hls.js', 'dist'), { prefix: '/hls.js' })` — serve hls.js library
 - Increase body size limit: `app.use(json({ limit: '500mb' }))`
 
 **Subtask 5.3 – File upload config**
+
 - In `UploadController`, configure `FileInterceptor` with `limits: { fileSize: 500 * 1024 * 1024 }` (500 MB)
 - Accept video MIME types: `video/mp4`, `video/quicktime`, `video/x-msvideo`, etc.
 
@@ -287,12 +301,15 @@ Single FFmpeg call — one input, 4 video+audio outputs, filter_complex for scal
 ### Task 6 — Test the Full Pipeline
 
 **Subtask 6.1 – Start Redis**
+
 - `redis-server --daemonize yes` (or `brew services start redis`)
 
 **Subtask 6.2 – Start the app**
+
 - `bun run start:dev`
 
 **Subtask 6.3 – Upload a video**
+
 ```bash
 curl -X POST http://localhost:3000/upload \
   -F "file=@/path/to/test-video.mp4"
@@ -300,16 +317,19 @@ curl -X POST http://localhost:3000/upload \
 ```
 
 **Subtask 6.4 – Poll job status**
+
 ```bash
 curl http://localhost:3000/job/1
 # → { "id": "1", "status": "processing", "progress": 42 }
 ```
 
 **Subtask 6.5 – Open player**
+
 - Browser → `http://localhost:3000/stream/1`
 - Verify hls.js loads and video plays with ABR switching
 
 **Subtask 6.6 – Verify HLS output**
+
 ```bash
 ls -la storage/hls/1/
 # Should show: master.m3u8 1080p.m3u8 720p.m3u8 480p.m3u8 360p.m3u8 *_.ts
