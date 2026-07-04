@@ -9,6 +9,7 @@ import {
   HLS_OUTPUT_DIR,
   UPLOADS_DIR,
   SEGMENT_CONFIG,
+  TRANSCODE_QUEUE_NAME,
 } from './transcode.constants';
 
 /**
@@ -20,22 +21,19 @@ import {
  * writes HLS output to storage/hls/<uuid>/, and generates
  * a master.m3u8 linking all variant playlists.
  */
-@Processor('transcode')
+@Processor(TRANSCODE_QUEUE_NAME)
 export class TranscodeProcessor extends WorkerHost {
   private readonly logger = new Logger(TranscodeProcessor.name);
 
   async process(job: Job): Promise<void> {
     const { id: uuid, file_path } = job.data;
-
     this.logger.log(`Processing job ${job.id} for video ${uuid}`);
 
     // Create the output directory for this video
     const outputDir = path.join(HLS_OUTPUT_DIR, uuid);
     await fs.mkdir(outputDir, { recursive: true });
-    this.logger.log(`Created output directory: ${outputDir}`);
 
     // Spawn 4 parallel ffmpeg processes — one per quality level
-    // Each promise resolves independently with its success/failure
     const results = await Promise.all(
       ABR_PRESETS.map((preset) =>
         this.transcodeRendition(job, file_path, outputDir, preset),
@@ -43,9 +41,8 @@ export class TranscodeProcessor extends WorkerHost {
     );
 
     // If any rendition failed, throw so BullMQ marks the job as failed
-    const allSucceeded = results.every((r) => r.success);
-    if (!allSucceeded) {
-      const failed = results.filter((r) => !r.success);
+    const failed = results.filter((r) => !r.success);
+    if (failed.length) {
       this.logger.error(
         `Job ${job.id} failed: ${failed.map((f) => f.presetName).join(', ')}`,
       );
@@ -55,15 +52,13 @@ export class TranscodeProcessor extends WorkerHost {
     }
 
     // All 4 succeeded — generate the master playlist and clean up
-    this.logger.log(
-      `All renditions complete for ${uuid}, generating master playlist`,
-    );
+    this.logger.log(`All renditions complete for ${uuid}`);
     await this.generateMasterPlaylist(outputDir);
 
     // Delete the original upload
     const originalFile = path.join(UPLOADS_DIR, path.basename(file_path));
     await fs.unlink(originalFile).catch(() => {});
-    this.logger.log(`Deleted original file: ${originalFile}`);
+    this.logger.log(`Deleted original: ${originalFile}`);
   }
 
   /**
@@ -84,12 +79,13 @@ export class TranscodeProcessor extends WorkerHost {
     const segmentPattern = path.join(presetDir, 'segment%d.ts');
 
     await fs.mkdir(presetDir, { recursive: true });
-
-    this.logger.log(`Starting ${preset.name} transcode: ${inputPath}`);
+    this.logger.log(`Starting ${preset.name} transcode`);
 
     return new Promise((resolve) => {
-      // Build the ffmpeg command
+      // Build the ffmpeg command using fluent-ffmpeg API
       const command = ffmpeg(inputPath)
+        // Map all streams from input (video + audio)
+        .outputOptions(['-map', '0'])
         // Video settings
         .videoCodec('libx264')
         .videoBitrate(preset.videoBitrate)
@@ -97,22 +93,20 @@ export class TranscodeProcessor extends WorkerHost {
         // Audio settings
         .audioCodec('aac')
         .audioBitrate(preset.audioBitrate)
-        // HLS output options
+        // HLS output settings
         .outputOptions([
-          '-map',
-          '0',
           '-preset',
           SEGMENT_CONFIG.preset,
           '-f',
-          'hls', // output format = HLS
+          'hls',
           '-hls_time',
-          String(SEGMENT_CONFIG.segment_time), // segment duration in seconds
+          String(SEGMENT_CONFIG.segment_time),
           '-hls_list_size',
-          '0', // keep all segments (no rolling window)
+          '0',
           '-hls_segment_filename',
-          segmentPattern, // segment file path pattern
+          segmentPattern,
           '-movflags',
-          SEGMENT_CONFIG.movflags, // faststart for streaming
+          SEGMENT_CONFIG.movflags,
         ])
         .output(playlistPath);
 
@@ -126,13 +120,13 @@ export class TranscodeProcessor extends WorkerHost {
 
       // ffmpeg finished successfully
       command.on('end', () => {
-        this.logger.log(`${preset.name} transcode complete`);
+        this.logger.log(`${preset.name} complete`);
         resolve({ presetName: preset.name, success: true });
       });
 
       // ffmpeg failed — log the error, resolve with failure
       command.on('error', (err: Error) => {
-        this.logger.error(`${preset.name} transcode failed: ${err.message}`);
+        this.logger.error(`${preset.name} failed: ${err.message}`);
         resolve({ presetName: preset.name, success: false });
       });
 
@@ -147,23 +141,21 @@ export class TranscodeProcessor extends WorkerHost {
    */
   private async generateMasterPlaylist(outputDir: string): Promise<void> {
     const lines = ['#EXTM3U'];
+    const bandwidthMap: Record<string, number> = {
+      '1080p': 5_000_000,
+      '720p': 3_000_000,
+      '480p': 1_500_000,
+      '360p': 800_000,
+    };
 
     for (const preset of ABR_PRESETS) {
-      // Map preset name to bandwidth in bits (matching the bitrate strings)
-      const bandwidthMap: Record<string, number> = {
-        '1080p': 5_000_000,
-        '720p': 3_000_000,
-        '480p': 1_500_000,
-        '360p': 800_000,
-      };
-
       lines.push(
         `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidthMap[preset.name]},RESOLUTION=${preset.width}x${preset.height}`,
         `${preset.name}.m3u8`,
       );
     }
 
-    const masterPath = path.join(outputDir, 'master.m3u8');
-    await fs.writeFile(masterPath, lines.join('\n'));
+    // Write the master playlist
+    await fs.writeFile(path.join(outputDir, 'master.m3u8'), lines.join('\n'));
   }
 }

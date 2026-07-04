@@ -1,98 +1,177 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# HLS ABR Streaming Demo
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+<image alt="Nest Logo" src="https://nestjs.com/img/logo-small.svg" width="120" height="120" align="right" />
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+A NestJS-based HLS streaming solution with adaptive bitrate (ABR) transcoding.
 
-## Description
+## Overview
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+This project implements a complete HLS streaming pipeline:
 
-## Project setup
+1. **Upload** an MP4 video file via `POST /upload`
+2. **Transcode** it in parallel using FFmpeg into 4 ABR quality levels (1080p, 720p, 480p, 360p) in HLS format
+3. **Serve** the HLS segments via `GET /video/{uuid}/{filename}`
 
-```bash
-$ npm install
-```
+The pipeline uses:
+- **NestJS v11** (Express platform)
+- **BullMQ** + Redis for job queuing
+- **fluent-ffmpeg** for parallel ABR transcoding
+- **HLS.js** for client-side playback (in frontend)
+- **Bun** runtime for fast TypeScript compilation
 
-## Compile and run the project
+## Quick Start
+
+### Prerequisites
+
+- Node.js v20+
+- Bun
+- FFmpeg installed (`ffmpeg -version`)
+- Redis on localhost (port 6379)
+
+### Installation
 
 ```bash
-# development
-$ npm run start
+# Clone and change directory
+cd hls
 
-# watch mode
-$ npm run start:dev
+# Install dependencies
+bun install
 
-# production mode
-$ npm run start:prod
+# Run tests
+bun run test
+
+# Build for production
+bun run build
+
+# Development (watch mode)
+bun run start:dev
 ```
 
-## Run tests
+### Core Commands
+
+| Command | What |
+|---------|------|
+| `bun run build` | Compile TypeScript to `dist/` |
+| `bun run start:dev` | Run in watch mode on PORT 3000 |
+| `bun run lint` | ESLint + Prettier check/fix |
+| `bun run format` | Auto-format with Prettier |
+| `bun run test` | Run unit tests |
+| `bun run test:e2e` | Run e2e tests |
+
+### Running Tests
 
 ```bash
-# unit tests
-$ npm run test
+# Unit tests (jest)
+bun run test
 
-# e2e tests
-$ npm run test:e2e
+# E2E tests
+bun run test:e2e
 
-# test coverage
-$ npm run test:cov
+# Test coverage
+bun run test:cov
 ```
 
-## Deployment
+## Architecture
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Data Flow
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. **Upload** → saves MP4 to `storage/uploads/<uuid>#filename.mp4`
+2. **Transcode** → enqueues `transcode` queue, generates 4 parallel ffmpeg processes
+3. **HLS Output** → writes to `storage/hls/<uuid>/` (subfolders per preset)
+4. **Master Playlist** → generated after all 4 renditions complete
+5. **Serving** → `GET /video/<uuid>/<file>` serves static HLS files
+
+### Directory Structure
+
+```
+storage/
+├── uploads/      # Raw uploaded MP4 files
+└── hls/          # HLS output (master.m3u8 + variant playlists + segments)
+```
+
+### Key Components
+
+- **`UploadController`** — handles file upload (500MB max, MP4 only)
+- **`TranscodeProcessor`** — parallel ffmpeg jobs, tracks progress, cleans up
+- **`VideoController`** — serves HLS files for playback
+
+## Quick Usage
+
+### Upload a Video
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+curl -X POST -F "file=@video.mp4" http://localhost:3000/upload
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+This saves the video and enqueues the transcode job. Check logs for progress.
 
-## Resources
+### Watch Transcoding Progress
 
-Check out a few resources that may come in handy when working with NestJS:
+In a terminal (running the app):
+```
+[TranscodeProcessor] Processing job abc123 for video uuid123
+[TranscodeProcessor] Starting 1080p transcode
+[TranscodeProcessor] Starting 720p transcode
+[TranscodeProcessor] Starting 480p transcode
+[TranscodeProcessor] Starting 360p transcode
+[TranscodeProcessor] 1080p complete
+[TranscodeProcessor] 720p complete
+[TranscodeProcessor] 480p complete
+[TranscodeProcessor] 360p complete
+[TranscodeProcessor] All renditions complete for uuid123
+[TranscodeProcessor] Deleted original: storage/uploads/uuid123#video.mp4
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Play HLS in Browser
 
-## Support
+```html
+<hls-js-player></hls-js-player>
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Or use hls.js directly:
+```typescript
+import Hls from 'hls.js';
 
-## Stay in touch
+if (Hls.isSupported()) {
+  const hls = new Hls();
+  hls.loadSource('/video/<uuid>/master.m3u8');
+  hls.attachMedia(videoElement);
+}
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Projects & Dependencies
+
+### Core Libraries
+
+- **`@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express`** — NestJS framework
+- **`@nestjs/bullmq`** — BullMQ integration
+- **`bullmq`, `ioredis`** — Job queues
+- **`fluent-ffmpeg`** — Parallel ABR transcoding
+- **`hls.js`** — HLS player
+
+### Configuration
+
+- **`tsconfig.build.json`** — Build-specific TypeScript config
+- **`tsconfig.json`** — Development TypeScript config
+- **`nest-cli.json`** — NestJS CLI (auto delete `dist/`)
+- **`.prettierrc`**, **`eslint.config.mjs`** — Code style
+
+## Project Files
+
+- **`src/upload/upload.controller.ts`** — Upload endpoint
+- **`src/upload/upload.service.ts`** — Saves file, enqueues transcode
+- **`src/transcode/transcode.processor.ts`** — Parallel ffmpeg jobs
+- **`src/transcode/transcode.constants.ts`** — ABR presets, segment config
+- **`src/video/video.controller.ts`** — Serves HLS files
+- **`src/app.module.ts`** — Root module (Upload + Transcode + BullMQ)
+
+## Built with ❤️ using
+
+[![Nest](https://nestjs.com/img/logo-small.svg)](https://nestjs.com)
+[![Bun](https://github.com/oven-sh/bun/assets/2768712/2950b952-c060-44a6-9ed1-24a52bb119fb)](https://bun.sh)
+[![Redis](https://raw.githubusercontent.com/redis/redis/7.x/logo/redis_logo.png)](https://redis.io)
+[![FFmpeg](https://www.ffmpeg.org/assets/logo.png)](https://ffmpeg.org)
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is licensed under the MIT License.
