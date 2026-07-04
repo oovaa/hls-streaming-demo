@@ -84,6 +84,7 @@ export class TranscodeProcessor extends WorkerHost {
     const segmentPattern = path.join(presetDir, 'segment%d.ts');
 
     await fs.mkdir(presetDir, { recursive: true });
+
     this.logger.log(`Starting ${preset.name} transcode: ${inputPath}`);
 
     return new Promise((resolve) => {
@@ -98,6 +99,8 @@ export class TranscodeProcessor extends WorkerHost {
         .audioBitrate(preset.audioBitrate)
         // HLS output options
         .outputOptions([
+          '-map',
+          '0',
           '-preset',
           SEGMENT_CONFIG.preset,
           '-f',
