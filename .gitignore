@@ -6,3 +6,4 @@ storage/hls/*
 !storage/uploads/.gitkeep
 !storage/hls/.gitkeep
 bun.lock
+.env

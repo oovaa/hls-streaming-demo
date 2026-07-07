@@ -290,7 +290,6 @@ Single FFmpeg call — one input, 4 video+audio outputs, filter_complex for scal
 - `app.useStaticAssets(join(__dirname, '..', 'storage', 'hls'), { prefix: '/hls' })` — serve HLS files
 - `app.useStaticAssets(join(__dirname, '..', 'node_modules', 'hls.js', 'dist'), { prefix: '/hls.js' })` — serve hls.js library
 - Increase body size limit: `app.use(json({ limit: '500mb' }))`
-
 **Subtask 5.3 – File upload config**
 
 - In `UploadController`, configure `FileInterceptor` with `limits: { fileSize: 500 * 1024 * 1024 }` (500 MB)
