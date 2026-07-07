@@ -27,7 +27,7 @@ export class StreamController {
 
   @Get('job/:id')
   findOne(@Param('id') id: string) {
-    return this.streamService.getJobStatus(+id);
+    return this.streamService.getJobStatus(id);
   }
 
   @Patch(':id')
