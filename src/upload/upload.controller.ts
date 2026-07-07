@@ -3,7 +3,6 @@ import {
   Post,
   UseInterceptors,
   UploadedFile,
-  Logger,
 } from '@nestjs/common';
 import { UploadService } from './upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -11,20 +10,17 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
-  logger = new Logger(UploadController.name);
+
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 500 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
+      fileFilter: (_, file, cb) => {
         const allowed = ['video/mp4'];
-        // cb(null, allowed.includes(file.mimetype));
+
         if (allowed.includes(file.mimetype)) cb(null, true);
         else {
-          console.log('file isnt supported', file.mimetype);
-
-          // throw new Error('Not supported file ' + file.mimetype);
-
+          console.error(`File rejected: unsupported mimetype ${file.mimetype}`);
           cb(null, false);
         }
       },

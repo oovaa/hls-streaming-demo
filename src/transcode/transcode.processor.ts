@@ -105,7 +105,6 @@ export class TranscodeProcessor extends WorkerHost {
           SEGMENT_CONFIG.movflags,
         ])
         .output(playlistPath);
-
       // Listen for progress — called periodically while ffmpeg runs
       command.on('progress', (progress) => {
         const percent = Math.round(progress.percent ?? 0);
