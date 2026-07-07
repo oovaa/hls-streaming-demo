@@ -71,14 +71,10 @@ export class TranscodeProcessor extends WorkerHost {
     outputDir: string,
     preset: (typeof ABR_PRESETS)[number],
   ): Promise<{ presetName: string; success: boolean }> {
-    // Create the preset subfolder: storage/hls/<uuid>/1080p/
-    const presetDir = path.join(outputDir, preset.name);
     // Playlist goes at the root: storage/hls/<uuid>/1080p.m3u8
     const playlistPath = path.join(outputDir, `${preset.name}.m3u8`);
-    // Segment pattern inside the preset folder: storage/hls/<uuid>/1080p/segment0.ts
-    const segmentPattern = path.join(presetDir, 'segment%d.ts');
-
-    await fs.mkdir(presetDir, { recursive: true });
+    // Segments in the root with preset prefix: storage/hls/<uuid>/1080p_000.ts
+    const segmentPattern = path.join(outputDir, `${preset.name}_%03d.ts`);
     this.logger.log(`Starting ${preset.name} transcode`);
 
     return new Promise((resolve) => {
