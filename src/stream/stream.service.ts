@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger as Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { TRANSCODE_QUEUE_NAME } from 'src/transcode/transcode.constants';
+import { TRANSCODE_QUEUE_NAME } from '../transcode/transcode.constants';
 import { Queue } from 'bullmq';
 
 @Injectable()
@@ -8,13 +8,14 @@ export class StreamService {
   constructor(
     @InjectQueue(TRANSCODE_QUEUE_NAME) private readonly videoQueue: Queue,
   ) {}
+  logger = new Logger(StreamService.name);
   async getJobStatus(id: string) {
     try {
       const job_details = await this.videoQueue.getJob(id);
-      Logger.log(`Gog the job details of the id: ${job_details?.id}`);
+      this.logger.log(`Geg the job details of the id: ${job_details?.id}`);
       return job_details;
     } catch (err) {
-      Logger.warn('couldnt get the job id not found');
+      this.logger.warn('couldnt get the job id not found');
       return null;
     }
   }

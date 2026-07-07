@@ -161,7 +161,7 @@ if (Hls.isSupported()) {
 - **`src/upload/upload.controller.ts`** — Upload endpoint
 - **`src/upload/upload.service.ts`** — Saves file, enqueues transcode
 - **`src/transcode/transcode.processor.ts`** — Parallel ffmpeg jobs
-- **`src/transcode/transcode.constants.ts`** — ABR presets, segment config
+- **`../trasncode/transcode.constants.ts`** — ABR presets, segment config
 - **`src/video/video.controller.ts`** — Serves HLS files
 - **`src/app.module.ts`** — Root module (Upload + Transcode + BullMQ)
 

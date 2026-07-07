@@ -8,9 +8,12 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', '..', 'storage', 'hls'), {
     prefix: '/hls',
   });
-  app.useStaticAssets(join(__dirname, '..', '..', 'node_modules', 'hls.js', 'dist'), {
-    prefix: '/hls.js',
-  });
+  app.useStaticAssets(
+    join(__dirname, '..', '..', 'node_modules', 'hls.js', 'dist'),
+    {
+      prefix: '/hls.js',
+    },
+  );
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

@@ -24,7 +24,7 @@ Implement ABR HLS transcoding and serving for uploaded videos. Upload an MP4 →
 | Decision | Choice |
 |---|---|
 | Parallelism | 4 parallel ffmpeg processes (one per preset) |
-| ABR presets | Use existing `ABR_PRESETS` from `src/transcode/transcode.constants.ts` (1080p/720p/480p/360p) |
+| ABR presets | Use existing `ABR_PRESETS` from `../trasncode/transcode.constants.ts` (1080p/720p/480p/360p) |
 | Job data shape | `{ uuid, file_path }` — presets read from constants |
 | File layout | Subfolders: `storage/hls/<uuid>/1080p/`, `storage/hls/<uuid>/720p/`, etc. |
 | Master playlist | Generated once during transcoding after all 4 renditions complete |
@@ -38,7 +38,7 @@ Implement ABR HLS transcoding and serving for uploaded videos. Upload an MP4 →
 ## Source Files to Modify
 
 - **`src/transcode/transcode.processor.ts`** — replace stub with fluent-ffmpeg parallel encoding
-- **`src/transcode/transcode.constants.ts`** — may need segment/playlist naming config
+- **`../trasncode/transcode.constants.ts`** — may need segment/playlist naming config
 - **`src/transcode/transcode.module.ts`** — possibly add providers if needed
 - **New: `src/video/video.controller.ts`** — add `GET /video/:uuid/:file` endpoint
 - **`src/app.module.ts`** — register any new controllers/providers

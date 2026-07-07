@@ -3,7 +3,7 @@ import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { randomUUID } from 'crypto';
 import { writeFile } from 'fs/promises';
-import { TRANSCODE_QUEUE_NAME } from 'src/transcode/transcode.constants';
+import { TRANSCODE_QUEUE_NAME } from '../transcode/transcode.constants';
 
 @Injectable()
 export class UploadService {

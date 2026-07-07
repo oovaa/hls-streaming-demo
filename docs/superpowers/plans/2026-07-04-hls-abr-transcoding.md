@@ -37,7 +37,7 @@ git commit -m "deps: add fluent-ffmpeg"
 ## Task 2: Add output directory and segment config to constants
 
 **Files:**
-- Modify: `src/transcode/transcode.constants.ts`
+- Modify: `../trasncode/transcode.constants.ts`
 
 - [ ] **Step 1: Add output path and segment config constants**
 
@@ -93,7 +93,7 @@ Expected: no new errors from this file
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/transcode/transcode.constants.ts
+git add ../trasncode/transcode.constants.ts
 git commit -m "feat: add HLS output and segment config constants"
 ```
 
@@ -252,7 +252,7 @@ import {
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { HLS_OUTPUT_DIR } from 'src/transcode/transcode.constants';
+import { HLS_OUTPUT_DIR } from '../trasncode/transcode.constants';
 
 @Controller('video')
 export class VideoController {
