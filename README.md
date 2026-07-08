@@ -10,7 +10,7 @@ This project implements a complete HLS streaming pipeline:
 
 1. **Upload** an MP4 video file via `POST /upload`
 2. **Transcode** it in parallel using FFmpeg into 4 ABR quality levels (1080p, 720p, 480p, 360p) in HLS format
-3. **Serve** the HLS segments via `GET /video/{uuid}/{filename}`
+3. **Serve** the HLS segments via `GET /hls/{uuid}/master.m3u8` and a player page at `GET /stream/{uuid}`
 
 The pipeline uses:
 - **NestJS v11** (Express platform)
@@ -76,10 +76,10 @@ bun run test:cov
 ### Data Flow
 
 1. **Upload** → saves MP4 to `storage/uploads/<uuid>#filename.mp4`
-2. **Transcode** → enqueues `transcode` queue, generates 4 parallel ffmpeg processes
-3. **HLS Output** → writes to `storage/hls/<uuid>/` (subfolders per preset)
+2. **Transcode** → enqueues `transcode` queue, spawns 4 parallel ffmpeg processes
+3. **HLS Output** → writes to `storage/hls/<uuid>/` (one `.m3u8` + `.ts` segments per preset)
 4. **Master Playlist** → generated after all 4 renditions complete
-5. **Serving** → `GET /video/<uuid>/<file>` serves static HLS files
+5. **Serving** → `main.ts` serves `storage/hls` under `/hls`; `GET /stream/{uuid}` returns an hls.js player page
 
 ### Directory Structure
 
@@ -93,7 +93,8 @@ storage/
 
 - **`UploadController`** — handles file upload (500MB max, MP4 only)
 - **`TranscodeProcessor`** — parallel ffmpeg jobs, tracks progress, cleans up
-- **`VideoController`** — serves HLS files for playback
+- **`StreamController`** — `GET /job/{id}` (job status) and `GET /stream/{id}` (player page)
+- **`main.ts`** — static serving: `/hls` → `storage/hls`, `/hls.js` → `node_modules/hls.js/dist`
 
 ## Quick Usage
 
@@ -124,17 +125,19 @@ In a terminal (running the app):
 
 ### Play HLS in Browser
 
-```html
-<hls-js-player></hls-js-player>
+Open the player page (served by `StreamController`):
+
+```
+http://localhost:3000/stream/<uuid>
 ```
 
-Or use hls.js directly:
+Or use hls.js directly against the static HLS path:
 ```typescript
 import Hls from 'hls.js';
 
 if (Hls.isSupported()) {
   const hls = new Hls();
-  hls.loadSource('/video/<uuid>/master.m3u8');
+  hls.loadSource('/hls/<uuid>/master.m3u8');
   hls.attachMedia(videoElement);
 }
 ```
@@ -161,9 +164,10 @@ if (Hls.isSupported()) {
 - **`src/upload/upload.controller.ts`** — Upload endpoint
 - **`src/upload/upload.service.ts`** — Saves file, enqueues transcode
 - **`src/transcode/transcode.processor.ts`** — Parallel ffmpeg jobs
-- **`../trasncode/transcode.constants.ts`** — ABR presets, segment config
-- **`src/video/video.controller.ts`** — Serves HLS files
-- **`src/app.module.ts`** — Root module (Upload + Transcode + BullMQ)
+- **`src/transcode/transcode.constants.ts`** — ABR presets, segment config
+- **`src/stream/stream.controller.ts`** — Job status + player page routes
+- **`src/stream/stream.service.ts`** — Builds the hls.js player HTML
+- **`src/app.module.ts`** — Root module (Upload + Transcode + Stream + BullMQ)
 
 ## Built with ❤️ using
 

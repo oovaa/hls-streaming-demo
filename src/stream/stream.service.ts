@@ -15,7 +15,7 @@ export class StreamService {
       this.logger.log(`Geg the job details of the id: ${job_details?.id}`);
       return job_details;
     } catch (err) {
-      this.logger.warn('couldnt get the job id not found');
+      this.logger.warn(`couldnt get the job id not found, ${err}`);
       return null;
     }
   }
