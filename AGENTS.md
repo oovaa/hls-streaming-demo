@@ -47,6 +47,10 @@ through `projectService` — type errors surface as lint failures, not just styl
 - README claims HLS is served at `/video/<uuid>/...` — that is stale; the real
   path is `/hls/<uuid>/...`.
 - Design spec lives at `docs/superpowers/specs/2026-06-28-hls-streaming-demo-design.md`.
+- `schema.ts` (Drizzle ORM) and `drizzle.config.ts` exist at repo root but are
+  **unused** — no migrations dir, not imported by any module. `drizzle.config.ts`
+  also has a typo in the output dir (`'dirzzle'`). Don't wire these in unless
+  explicitly asked; the app is stateless (Redis + filesystem only).
 
 ## Style
 - **Prettier**: single quotes, `trailingComma: all`, `endOfLine: auto`.

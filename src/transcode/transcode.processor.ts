@@ -51,6 +51,8 @@ export class TranscodeProcessor extends WorkerHost {
       );
     }
 
+    this.logger.warn(`failed renditions: ${failed} `);
+
     // All 4 succeeded — generate the master playlist and clean up
     this.logger.log(`All renditions complete for ${uuid}`);
     await this.generateMasterPlaylist(outputDir);

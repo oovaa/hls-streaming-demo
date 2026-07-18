@@ -4,6 +4,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { TranscodeModule } from './transcode/transcode.module';
 import { StreamModule } from './stream/stream.module';
 import { ConfigModule } from '@nestjs/config';
+import { DrizzleModule } from './drizzle/drizzle.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     TranscodeModule,
     StreamModule,
+    DrizzleModule,
   ],
 })
 export class AppModule {}
